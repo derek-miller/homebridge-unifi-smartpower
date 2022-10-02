@@ -1,0 +1,101 @@
+{
+  "pluginAlias": "UniFiSmartPower",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "UniFi SmartPower",
+        "minLength": 1,
+        "required": true
+      },
+      "host": {
+        "title": "UniFi Network Host/IP Address",
+        "type": "string",
+        "default": "192.168.1.1",
+        "minLength": 3,
+        "required": true
+      },
+      "port": {
+        "title": "UniFi Network Port",
+        "type": "integer",
+        "default": 443,
+        "minimum": 1,
+        "required": true
+      },
+      "username": {
+        "title": "User Name",
+        "type": "string",
+        "default": "ubnt",
+        "required": true
+      },
+      "password": {
+        "title": "Password",
+        "type": "string",
+        "default": "ubnt",
+        "required": true,
+        "options": {
+          "hidden": true
+        }
+      },
+      "includeOutlets": {
+        "title": "Include Outlets",
+        "type": "array",
+        "default": [],
+        "required": false,
+        "items": {
+          "title": "Outlet Name",
+          "type": "string"
+        }
+      },
+      "excludeOutlets": {
+        "title": "Exclude Outlets",
+        "type": "array",
+        "default": [],
+        "required": false,
+        "items": {
+          "title": "Outlet Name",
+          "type": "string"
+        }
+      },
+      "outletStatusCacheTtl": {
+        "title": "Outlet Status Cache TTL (in seconds)",
+        "type": "integer",
+        "default": 15,
+        "minimum": 5,
+        "maximum": 60,
+        "required": true
+      },
+      "outletStatusPollInterval": {
+        "title": "Outlet Status Poll Interval (in milliseconds)",
+        "type": "integer",
+        "default": 15000,
+        "minimum": 5000,
+        "maximum": 60000,
+        "required": true
+      }
+    }
+  },
+  "form": [
+    "name",
+    "host",
+    "port",
+    "username",
+    "password",
+    {
+      "type": "fieldset",
+      "expandable": true,
+      "title": "Advanced Settings",
+      "description": "",
+      "items": [
+        "includeOutlets",
+        "excludeOutlets",
+        "outletStatusCacheTtl",
+        "outletStatusPollInterval"
+      ]
+    }
+  ]
+}
