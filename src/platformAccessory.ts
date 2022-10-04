@@ -63,7 +63,7 @@ export class UniFiSmartPowerOutletPlatformAccessory {
       this.context.device,
       this.outletIndex,
       ({ relayState, inUse }) => {
-        if (this.status !== relayState) {
+        if (this.status !== relayState && relayState !== UniFiSmartPowerOutletState.UNKNOWN) {
           this.log.debug(
             '[%s] Received outlet subscription status update: %s -> %s',
             this.outletName,
@@ -73,7 +73,11 @@ export class UniFiSmartPowerOutletPlatformAccessory {
           this.status = relayState;
           statusCharacteristic.updateValue(!!relayState);
         }
-        if (inUseCharacteristic !== null && this.inUse !== inUse) {
+        if (
+          inUseCharacteristic !== null &&
+          this.inUse !== inUse &&
+          inUse !== UniFiSmartPowerOutletInUse.UNKNOWN
+        ) {
           this.log.debug(
             '[%s] Received outlet subscription InUse update: %s -> %s',
             this.outletName,
@@ -114,18 +118,18 @@ export class UniFiSmartPowerOutletPlatformAccessory {
       this.outletName,
       UniFiSmartPowerOutletState[this.status],
     );
-    return !!this.status;
+    return this.status === UniFiSmartPowerOutletState.ON;
   }
 
   private getInUse(): CharacteristicValue {
-    if (this.status === UniFiSmartPowerOutletState.UNKNOWN) {
+    if (this.inUse === UniFiSmartPowerOutletInUse.UNKNOWN) {
       throw new this.hap.HapStatusError(this.hap.HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE);
     }
     this.log.debug(
       '[%s] Get Characteristic InUse ->',
       this.outletName,
-      UniFiSmartPowerOutletState[this.status],
+      UniFiSmartPowerOutletInUse[this.inUse],
     );
-    return !!this.status;
+    return this.inUse === UniFiSmartPowerOutletInUse.YES;
   }
 }
