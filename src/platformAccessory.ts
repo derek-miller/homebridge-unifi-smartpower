@@ -1,4 +1,4 @@
-import { CharacteristicValue, HAP, Logger, PlatformAccessory } from 'homebridge';
+import { Characteristic, CharacteristicValue, HAP, Logger, PlatformAccessory } from 'homebridge';
 
 import { UniFiSmartPowerHomebridgePlatform } from './platform';
 import {
@@ -6,11 +6,9 @@ import {
   UniFiSmartPowerDevice,
   UniFiSmartPowerOutlet,
   UniFiSmartPowerOutletAction,
+  UniFiSmartPowerOutletInUse,
   UniFiSmartPowerOutletState,
 } from './uniFiSmartPower';
-
-export type UniFiSmartPowerOutletOptionalState = Pick<UniFiSmartPowerOutlet, 'name' | 'index'> &
-  Partial<UniFiSmartPowerOutlet>;
 
 export interface UniFiSmartPowerOutletPlatformAccessoryContext {
   device: UniFiSmartPowerDevice;
@@ -27,11 +25,12 @@ export class UniFiSmartPowerOutletPlatformAccessory {
   private readonly id: string;
 
   private status = UniFiSmartPowerOutletState.UNKNOWN;
+  private inUse = UniFiSmartPowerOutletInUse.UNKNOWN;
 
   constructor(
     private readonly platform: UniFiSmartPowerHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
-    private readonly outlet: UniFiSmartPowerOutletOptionalState,
+    private readonly outlet: UniFiSmartPowerOutlet,
   ) {
     this.log = this.platform.log;
     this.hap = this.platform.api.hap;
@@ -42,27 +41,50 @@ export class UniFiSmartPowerOutletPlatformAccessory {
     this.outletName = this.outlet.name;
     this.id = `${this.serialNumber}.${this.outletIndex}`;
 
-    const statusCharacteristic = (this.accessory.getServiceById(
-      this.platform.Service.Outlet,
-      this.id,
-    ) || this.accessory.addService(this.platform.Service.Outlet, this.outletName, this.id))!
-      .setCharacteristic(this.platform.Characteristic.Name, this.outletName)
+    const outletService = (this.accessory.getServiceById(this.platform.Service.Outlet, this.id) ||
+      this.accessory.addService(
+        this.platform.Service.Outlet,
+        this.outletName,
+        this.id,
+      ))!.setCharacteristic(this.platform.Characteristic.Name, this.outletName);
+
+    const statusCharacteristic = outletService
       .getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.setOn.bind(this))
       .onGet(this.getOn.bind(this));
+    const inUseCharacteristic: Characteristic | null =
+      outlet.inUse !== UniFiSmartPowerOutletInUse.UNKNOWN
+        ? outletService
+            .getCharacteristic(this.platform.Characteristic.InUse)
+            .onGet(this.getInUse.bind(this))
+        : null;
 
-    this.uniFiSmartPower.subscribe(this.context.device, this.outletIndex, ({ relayState }) => {
-      if (this.status !== relayState) {
-        this.log.debug(
-          '[%s] Received outlet subscription status update: %s -> %s',
-          this.outletName,
-          UniFiSmartPowerOutletState[this.status],
-          UniFiSmartPowerOutletState[relayState],
-        );
-        this.status = relayState;
-        statusCharacteristic.updateValue(!!relayState);
-      }
-    });
+    this.uniFiSmartPower.subscribe(
+      this.context.device,
+      this.outletIndex,
+      ({ relayState, inUse }) => {
+        if (this.status !== relayState) {
+          this.log.debug(
+            '[%s] Received outlet subscription status update: %s -> %s',
+            this.outletName,
+            UniFiSmartPowerOutletState[this.status],
+            UniFiSmartPowerOutletState[relayState],
+          );
+          this.status = relayState;
+          statusCharacteristic.updateValue(!!relayState);
+        }
+        if (inUseCharacteristic !== null && this.inUse !== inUse) {
+          this.log.debug(
+            '[%s] Received outlet subscription InUse update: %s -> %s',
+            this.outletName,
+            UniFiSmartPowerOutletInUse[this.inUse],
+            UniFiSmartPowerOutletInUse[inUse],
+          );
+          this.inUse = inUse;
+          inUseCharacteristic.updateValue(!!inUse);
+        }
+      },
+    );
   }
 
   private async setOn(value: CharacteristicValue): Promise<void> {
@@ -89,6 +111,18 @@ export class UniFiSmartPowerOutletPlatformAccessory {
     }
     this.log.debug(
       '[%s] Get Characteristic On ->',
+      this.outletName,
+      UniFiSmartPowerOutletState[this.status],
+    );
+    return !!this.status;
+  }
+
+  private getInUse(): CharacteristicValue {
+    if (this.status === UniFiSmartPowerOutletState.UNKNOWN) {
+      throw new this.hap.HapStatusError(this.hap.HAPStatus.NOT_ALLOWED_IN_CURRENT_STATE);
+    }
+    this.log.debug(
+      '[%s] Get Characteristic InUse ->',
       this.outletName,
       UniFiSmartPowerOutletState[this.status],
     );
