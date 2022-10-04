@@ -96,6 +96,10 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         .setCharacteristic(this.Characteristic.FirmwareRevision, deviceStatus.device.version);
 
       for (const outlet of deviceStatus.outlets) {
+        // Use the name of the device if there is only a single outlet.
+        if (deviceStatus.outlets.length === 1) {
+          outlet.name = deviceStatus.device.name;
+        }
         if (
           Array.isArray(this.config.excludeOutlets) &&
           this.config.excludeOutlets.includes(outlet.name)
