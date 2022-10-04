@@ -57,8 +57,10 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
       return;
     }
 
+    const uuids: Set<string> = new Set();
     for (const deviceStatus of deviceStatuses) {
       const uuid = this.api.hap.uuid.generate(deviceStatus.device.serialNumber);
+      uuids.add(uuid);
       const existingAccessory = this.accessories.find((accessory) => accessory.UUID === uuid);
       const accessory =
         existingAccessory ??
@@ -87,6 +89,7 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
 
       accessory
         .getService(this.Service.AccessoryInformation)!
+        .setCharacteristic(this.Characteristic.Name, deviceStatus.device.name)
         .setCharacteristic(this.Characteristic.Manufacturer, 'Ubiquiti')
         .setCharacteristic(this.Characteristic.Model, deviceStatus.device.model)
         .setCharacteristic(this.Characteristic.SerialNumber, deviceStatus.device.serialNumber)
@@ -123,14 +126,14 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         this.log.info('Adding new accessory:', accessory.displayName);
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
-      const orphanedAccessories = this.accessories.filter((accessory) => accessory.UUID !== uuid);
-      if (orphanedAccessories.length > 0) {
-        this.log.info(
-          'Removing orphaned accessories from cache: ',
-          orphanedAccessories.map(({ displayName }) => displayName).join(', '),
-        );
-        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, orphanedAccessories);
-      }
+    }
+    const orphanedAccessories = this.accessories.filter((accessory) => !uuids.has(accessory.UUID));
+    if (orphanedAccessories.length > 0) {
+      this.log.info(
+        'Removing orphaned accessories from cache: ',
+        orphanedAccessories.map(({ displayName }) => displayName).join(', '),
+      );
+      this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, orphanedAccessories);
     }
   }
 }
