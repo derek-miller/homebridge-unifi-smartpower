@@ -26,12 +26,19 @@ export interface UniFiSmartPowerOutlet {
   name: string;
   relayState: UniFiSmartPowerOutletState;
   modemPowerCycleState: UniFiSmartPowerOutletState;
+  inUse: UniFiSmartPowerOutletInUse;
 }
 
 export enum UniFiSmartPowerOutletState {
   UNKNOWN = -1,
   OFF = 0,
   ON = 1,
+}
+
+export enum UniFiSmartPowerOutletInUse {
+  UNKNOWN = -1,
+  NO = 0,
+  YES = 1,
 }
 
 export enum UniFiSmartPowerOutletAction {
@@ -173,11 +180,13 @@ export class UniFiSmartPower {
                     name,
                     relay_state: relayState,
                     cycle_enable: modemPowerCycleState,
+                    outlet_power: power = null,
                   }) => ({
                     index,
                     name,
                     relayState: relayState ? 1 : 0,
                     modemPowerCycleState: modemPowerCycleState ? 1 : 0,
+                    inUse: power === null ? -1 : parseFloat(power) > 0 ? 1 : 0,
                   }),
                 ),
               }),
