@@ -55,7 +55,7 @@ export class UniFiSmartPowerOutletPlatformAccessory {
     const inUseCharacteristic: Characteristic | null =
       outlet.inUse !== UniFiSmartPowerOutletInUse.UNKNOWN
         ? outletService
-            .getCharacteristic(this.platform.Characteristic.InUse)
+            .getCharacteristic(this.platform.Characteristic.OutletInUse)
             .onGet(this.getInUse.bind(this))
         : null;
 
