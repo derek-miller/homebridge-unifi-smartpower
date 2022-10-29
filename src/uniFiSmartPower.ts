@@ -1,7 +1,7 @@
 import PubSub from 'pubsub-js';
 import { Logger } from 'homebridge';
 
-import cacheManager, { Cache } from 'cache-manager';
+import { Cache, caching } from 'cache-manager';
 import AsyncLock from 'async-lock';
 import Token = PubSubJS.Token;
 import { Controller } from 'node-unifi';
@@ -51,6 +51,7 @@ export interface UniFiSmartPowerConfig {
   port: number;
   username: string;
   password: string;
+  refreshDevicesPollInterval?: number;
   outletStatusPollInterval?: number;
   outletStatusCacheTtl?: number;
 }
@@ -63,22 +64,20 @@ export class UniFiSmartPower {
   private static readonly OUTLET_STATUS_CACHE_TTL_S_MIN = 5;
   private static readonly OUTLET_STATUS_CACHE_TTL_S_MAX = 60;
 
-  private static readonly OUTLET_STATUS_POLL_INTERVAL_MS_DEFAULT = 15 * 1000;
-  private static readonly OUTLET_STATUS_POLL_INTERVAL_MS_MIN = 5 * 1000;
-  private static readonly OUTLET_STATUS_POLL_INTERVAL_MS_MAX = 60 * 1000;
+  private static readonly OUTLET_STATUS_POLL_INTERVAL_S_DEFAULT = 15;
+  private static readonly OUTLET_STATUS_POLL_INTERVAL_S_MIN = 5;
+  private static readonly OUTLET_STATUS_POLL_INTERVAL_S_MAX = 60;
 
   private static readonly OUTLET_STATUS_LOCK = 'OUTLET_STATUS';
 
   private readonly lock = new AsyncLock({ domainReentrant: true });
-  private readonly cache: Cache;
-  // private readonly session: AxiosInstance;
+  private readonly cache: Promise<Cache>;
   private readonly controller: Controller;
 
   constructor(public readonly log: Logger, private readonly config: UniFiSmartPowerConfig) {
-    this.cache = cacheManager.caching({
+    this.cache = caching('memory', {
       ttl: 0, // No default ttl
       max: 0, // Infinite capacity
-      store: 'memory',
     });
     this.controller = new Controller({
       host: this.config.host,
@@ -87,6 +86,10 @@ export class UniFiSmartPower {
       password: this.config.password,
       sslverify: false,
     });
+  }
+
+  reset(): void {
+    PubSub.clearAllSubscriptions();
   }
 
   subscribe(
@@ -128,7 +131,7 @@ export class UniFiSmartPower {
             );
           }
         }
-        setTimeout(poll, this.pollInterval);
+        setTimeout(poll, this.outletStatusPollIntervalMs);
       };
       setTimeout(poll, 0);
     }
@@ -145,58 +148,57 @@ export class UniFiSmartPower {
     acquireLock = true,
   ): Promise<UniFiSmartPowerStatus[]> {
     const fetch = async (): Promise<UniFiSmartPowerStatus[]> =>
-      this.cache.wrap(
+      (await this.cache).wrap(
         UniFiSmartPower.outletStatusesCacheKey(device),
         async (): Promise<UniFiSmartPowerStatus[]> => {
           this.log.debug('[API] Fetching status from UniFi API');
           await this.controller.login();
           return (await this.controller.getAccessDevices(device?.mac ?? ''))
             .filter((device) => (device.outlet_table ?? []).length > 0)
-            .map(
-              ({
-                _id: id,
-                ip,
-                mac,
-                model,
-                version,
-                serial: serialNumber,
-                name,
-                state,
-                outlet_table: outlets,
-              }) => ({
-                device: {
-                  id,
-                  ip,
-                  mac,
-                  model,
-                  version,
-                  serialNumber,
-                  name,
-                  state,
-                },
-                outlets: outlets.map(
-                  ({
-                    index,
-                    name,
-                    relay_state: relayState,
-                    cycle_enable: modemPowerCycleState,
-                    outlet_power: power = null,
-                  }) => ({
-                    index,
-                    name,
-                    relayState: relayState ? 1 : 0,
-                    modemPowerCycleState: modemPowerCycleState ? 1 : 0,
-                    inUse: power === null ? -1 : parseFloat(power) > 0 ? 1 : 0,
-                  }),
-                ),
-              }),
-            );
+            .map((device) => UniFiSmartPower.transformDeviceStatusResponse(device));
         },
-        {
-          ttl: this.outletStatusCacheTtl,
-        },
+        this.outletStatusCacheTtl,
       );
     return acquireLock ? this.lock.acquire(UniFiSmartPower.OUTLET_STATUS_LOCK, fetch) : fetch();
+  }
+
+  static transformDeviceStatusResponse({
+    _id: id,
+    ip,
+    mac,
+    model,
+    version,
+    serial: serialNumber,
+    name,
+    outlet_table: outlets,
+  }): UniFiSmartPowerStatus {
+    return {
+      device: {
+        id,
+        ip,
+        mac,
+        model,
+        version,
+        serialNumber,
+        name,
+      },
+      outlets:
+        outlets?.map(
+          ({
+            index,
+            name,
+            relay_state: relayState,
+            cycle_enable: modemPowerCycleState,
+            outlet_power: power = null,
+          }) => ({
+            index,
+            name,
+            relayState: relayState ? 1 : 0,
+            modemPowerCycleState: modemPowerCycleState ? 1 : 0,
+            inUse: power === null ? -1 : parseFloat(power) > 0 ? 1 : 0,
+          }),
+        ) ?? [],
+    };
   }
 
   async getDeviceStatus(
@@ -237,8 +239,8 @@ export class UniFiSmartPower {
           cycle_enable: !!outlet.modemPowerCycleState,
         })),
       });
-      await this.cache.del(UniFiSmartPower.outletStatusesCacheKey(device));
-      await this.cache.del(UniFiSmartPower.outletStatusesCacheKey());
+      await (await this.cache).del(UniFiSmartPower.outletStatusesCacheKey(device));
+      await (await this.cache).del(UniFiSmartPower.outletStatusesCacheKey());
     });
   }
 
@@ -252,14 +254,16 @@ export class UniFiSmartPower {
     );
   }
 
-  private get pollInterval(): number {
-    return Math.max(
-      UniFiSmartPower.OUTLET_STATUS_POLL_INTERVAL_MS_MIN,
-      Math.min(
-        UniFiSmartPower.OUTLET_STATUS_POLL_INTERVAL_MS_MAX,
-        this.config.outletStatusPollInterval ??
-          UniFiSmartPower.OUTLET_STATUS_POLL_INTERVAL_MS_DEFAULT,
-      ),
+  private get outletStatusPollIntervalMs(): number {
+    return (
+      Math.max(
+        UniFiSmartPower.OUTLET_STATUS_POLL_INTERVAL_S_MIN,
+        Math.min(
+          UniFiSmartPower.OUTLET_STATUS_POLL_INTERVAL_S_MAX,
+          this.config.outletStatusPollInterval ??
+            UniFiSmartPower.OUTLET_STATUS_POLL_INTERVAL_S_DEFAULT,
+        ),
+      ) * 1000
     );
   }
 

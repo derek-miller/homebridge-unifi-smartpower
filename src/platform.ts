@@ -23,6 +23,10 @@ type UniFiSmartPowerHomebridgePlatformConfig = PlatformConfig &
   };
 
 export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin {
+  private static readonly REFRESH_DEVICES_POLL_INTERVAL_S_DEFAULT = 10 * 60 * 1000; // 10m
+  private static readonly REFRESH_DEVICES_POLL_INTERVAL_S_MIN = 2 * 60 * 1000; // 2m
+  private static readonly REFRESH_DEVICES_POLL_INTERVAL_S_MAX = 60 * 60 * 1000; // 60m
+
   public readonly Service: typeof Service;
   public readonly Characteristic: typeof Characteristic;
   public readonly accessories: PlatformAccessory[] = [];
@@ -38,7 +42,11 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
     this.Characteristic = this.api.hap.Characteristic;
     this.config = <UniFiSmartPowerHomebridgePlatformConfig>this.platformConfig;
     this.uniFiSmartPower = new UniFiSmartPower(log, this.config);
-    this.api.on(APIEvent.DID_FINISH_LAUNCHING, async () => this.discoverDevices());
+    const refreshDevices = async () => {
+      await this.discoverDevices();
+      setTimeout(refreshDevices, this.refreshDevicesPollIntervalMs);
+    };
+    this.api.on(APIEvent.DID_FINISH_LAUNCHING, refreshDevices);
   }
 
   configureAccessory(accessory: PlatformAccessory) {
@@ -47,6 +55,8 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
   }
 
   async discoverDevices() {
+    this.uniFiSmartPower.reset();
+
     let deviceStatuses: UniFiSmartPowerStatus[];
     try {
       deviceStatuses = await this.uniFiSmartPower.getDeviceStatuses();
@@ -60,7 +70,6 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
     const uuids: Set<string> = new Set();
     for (const deviceStatus of deviceStatuses) {
       const uuid = this.api.hap.uuid.generate(deviceStatus.device.serialNumber);
-      uuids.add(uuid);
       const existingAccessory = this.accessories.find((accessory) => accessory.UUID === uuid);
       const accessory =
         existingAccessory ??
@@ -95,6 +104,7 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         .setCharacteristic(this.Characteristic.SerialNumber, deviceStatus.device.serialNumber)
         .setCharacteristic(this.Characteristic.FirmwareRevision, deviceStatus.device.version);
 
+      let hasAnyOutlets = false;
       for (const outlet of deviceStatus.outlets) {
         // Use the name of the device if there is only a single outlet.
         if (deviceStatus.outlets.length === 1) {
@@ -112,6 +122,7 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         ) {
           continue;
         }
+        hasAnyOutlets = true;
         new UniFiSmartPowerOutletPlatformAccessory(this, accessory, outlet);
       }
 
@@ -123,12 +134,15 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
           accessory.removeService(service);
         });
 
-      if (existingAccessory) {
+      if (hasAnyOutlets && existingAccessory) {
         this.log.info('Restoring existing accessory from cache:', accessory.displayName);
         this.api.updatePlatformAccessories([accessory]);
-      } else {
+        uuids.add(uuid);
+      } else if (hasAnyOutlets) {
         this.log.info('Adding new accessory:', accessory.displayName);
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        uuids.add(uuid);
+        this.accessories.push(accessory);
       }
     }
     const orphanedAccessories = this.accessories.filter((accessory) => !uuids.has(accessory.UUID));
@@ -138,6 +152,25 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         orphanedAccessories.map(({ displayName }) => displayName).join(', '),
       );
       this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, orphanedAccessories);
+      for (const orphanedAccessory of orphanedAccessories) {
+        this.accessories.splice(
+          this.accessories.findIndex((accessory) => accessory.UUID === orphanedAccessory.UUID),
+          1,
+        );
+      }
     }
+  }
+
+  private get refreshDevicesPollIntervalMs(): number {
+    return (
+      Math.max(
+        UniFiSmartPowerHomebridgePlatform.REFRESH_DEVICES_POLL_INTERVAL_S_MIN,
+        Math.min(
+          UniFiSmartPowerHomebridgePlatform.REFRESH_DEVICES_POLL_INTERVAL_S_MAX,
+          this.config.refreshDevicesPollInterval ??
+            UniFiSmartPowerHomebridgePlatform.REFRESH_DEVICES_POLL_INTERVAL_S_DEFAULT,
+        ),
+      ) * 1000
+    );
   }
 }
