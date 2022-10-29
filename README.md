@@ -54,32 +54,52 @@ These config values should not be configured under normal situations, but are
 exposed nonetheless. Min, max, and default values are enforced to keep the
 plugin usable.
 
+#### Refresh Devices Poll Interval
+
+The polling interval (in seconds) to query the API for devices changes:
+
+```
+{
+  "platforms": [
+    {
+      // ... required config, see above
+      "refreshDevicesPollInterval": <seconds>, // Defaults to 600
+    }
+  ]
+}
+
 #### Status Cache TTL
 
 The time to live (in seconds) for a cached status to avoid excessive API calls:
 
 ```
+
 {
-  "platforms": [
-    {
-      // ... required config, see above
-      "outletStatusCacheTtl": <seconds>>, // Defaults to 15
-    }
-  ]
+"platforms": [
+{
+// ... required config, see above
+"outletStatusCacheTtl": <seconds>, // Defaults to 15
 }
+]
+}
+
 ```
 
 #### Status Poll Interval
 
-The polling interval (in milliseconds) to query the API for status changes:
+The polling interval (in seconds) to query the API for status changes:
 
 ```
+
 {
-  "platforms": [
-    {
-      // ... required config, see above
-      "outletStatusPollInterval": <milliseconds>>, // Defaults to 15000
-    }
-  ]
+"platforms": [
+{
+// ... required config, see above
+"outletStatusPollInterval": <seconds>, // Defaults to 15
 }
+]
+}
+
+```
+
 ```

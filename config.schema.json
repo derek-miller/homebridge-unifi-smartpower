@@ -61,6 +61,14 @@
           "type": "string"
         }
       },
+      "refreshDevicesPollInterval": {
+        "title": "Refresh Devices Poll Interval (in seconds)",
+        "type": "integer",
+        "default": 600,
+        "minimum": 120,
+        "maximum": 3600,
+        "required": true
+      },
       "outletStatusCacheTtl": {
         "title": "Outlet Status Cache TTL (in seconds)",
         "type": "integer",
@@ -70,11 +78,11 @@
         "required": true
       },
       "outletStatusPollInterval": {
-        "title": "Outlet Status Poll Interval (in milliseconds)",
+        "title": "Outlet Status Poll Interval (in seconds)",
         "type": "integer",
-        "default": 15000,
-        "minimum": 5000,
-        "maximum": 60000,
+        "default": 15,
+        "minimum": 5,
+        "maximum": 60,
         "required": true
       }
     }
@@ -93,6 +101,7 @@
       "items": [
         "includeOutlets",
         "excludeOutlets",
+        "refreshDevicesPollInterval",
         "outletStatusCacheTtl",
         "outletStatusPollInterval"
       ]
