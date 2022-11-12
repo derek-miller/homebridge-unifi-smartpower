@@ -34,15 +34,15 @@ for [Homebridge](https://github.com/homebridge/homebridge).
 
 #### Include/Exclude Outlets
 
-Outlets can be included or excluded by name:
+Outlets can be included or excluded by serial number and outlet number (see logs during startup):
 
 ```
 {
   "platforms": [
     {
       // ... required config, see above
-      "includeOutlets": ["<name>"], // Defaults to null
-      "excludeOutlets": ["<name>"] // Defaults to null
+      "includeOutlets": ["<serial number>.<index>"], // Defaults to null
+      "excludeOutlets": ["<serial number>.<index>"]  // Defaults to null
     }
   ]
 }

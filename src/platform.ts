@@ -73,7 +73,7 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
       const existingAccessory = this.accessories.find((accessory) => accessory.UUID === uuid);
       const accessory =
         existingAccessory ??
-        new this.api.platformAccessory(this.config.name ?? 'UniFi SmartPower PDU', uuid);
+        new this.api.platformAccessory(this.config.name ?? 'UniFi SmartPower', uuid);
 
       // Update the accessory context with the general info.
       accessory.context = <UniFiSmartPowerOutletPlatformAccessoryContext>{
@@ -110,15 +110,16 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         if (deviceStatus.outlets.length === 1) {
           outlet.name = deviceStatus.device.name;
         }
+        const accessoryId = `${deviceStatus.device.serialNumber}.${outlet.index}`;
         if (
           Array.isArray(this.config.excludeOutlets) &&
-          this.config.excludeOutlets.includes(outlet.name)
+          this.config.excludeOutlets.includes(accessoryId)
         ) {
           continue;
         }
         if (
           Array.isArray(this.config.includeOutlets) &&
-          !this.config.includeOutlets.includes(outlet.name)
+          !this.config.includeOutlets.includes(accessoryId)
         ) {
           continue;
         }
@@ -144,6 +145,9 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         uuids.add(uuid);
         this.accessories.push(accessory);
       }
+      accessory.services
+        .filter((s) => s instanceof this.Service.Outlet && s.subtype)
+        .forEach((s) => this.log.info('Outlet [%s]: %s', s.subtype ?? '', s.displayName ?? ''));
     }
     const orphanedAccessories = this.accessories.filter((accessory) => !uuids.has(accessory.UUID));
     if (orphanedAccessories.length > 0) {
