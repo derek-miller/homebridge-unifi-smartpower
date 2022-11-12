@@ -47,7 +47,7 @@
         "default": [],
         "required": false,
         "items": {
-          "title": "Outlet Name",
+          "title": "Outlet ID",
           "type": "string"
         }
       },
@@ -57,7 +57,7 @@
         "default": [],
         "required": false,
         "items": {
-          "title": "Outlet Name",
+          "title": "Outlet ID",
           "type": "string"
         }
       },
