@@ -9,7 +9,10 @@ for [Homebridge](https://github.com/homebridge/homebridge).
 
 ## Models Supported
 
-- TBD
+- [SmartPower PDU Pro (USP-PDU-Pro)](https://store.ui.com/collections/unifi-network-smartpower/products/usp-pdu-pro)
+- [SmartPower Plug (USP-Plug)](https://store.ui.com/collections/unifi-accessories/products/unifi-smart-power)
+- [SmartPower Strip (USP-Strip)](https://store.ui.com/collections/unifi-accessories/products/smartpower-strip)
+- [Next-Generation Gateway Pro (UXG-Pro)](https://store.ui.com/products/unifi-next-generation-gateway-professional)
 
 ## Configuration
 
@@ -21,14 +24,21 @@ for [Homebridge](https://github.com/homebridge/homebridge).
     {
       "platform": "UniFiSmartPower",
       "name": "UniFi SmartPower",
-      "host": "192.168.1.1",
-      "port": 443,
-      "username": "admin",
+      "host": "192.168.1.1", // Controller or CloudKey IP address
+      "port": 443, // and port
+      "username": "admin", // See note below about account credentials
       "password": "ubnt"
     }
   ]
 }
 ```
+
+#### Account Credentials
+
+You can use your Ubiquiti account credentials, though 2FA is supported. However, it is strongly
+recommend to create a local user with Admin privileges just for this plugin. See
+[this Ubiquity Help Article](https://help.ui.com/hc/en-us/articles/1500011491541-UniFi-Manage-users-and-user-roles)
+for creating new users.
 
 ### Optional Configuration
 
@@ -67,6 +77,7 @@ The polling interval (in seconds) to query the API for devices changes:
     }
   ]
 }
+```
 
 #### Status Cache TTL
 
@@ -75,12 +86,12 @@ The time to live (in seconds) for a cached status to avoid excessive API calls:
 ```
 
 {
-"platforms": [
-{
-// ... required config, see above
-"outletStatusCacheTtl": <seconds>, // Defaults to 15
-}
-]
+  "platforms": [
+    {
+      // ... required config, see above
+      "outletStatusCacheTtl": <seconds>, // Defaults to 15
+    }
+  ]
 }
 
 ```
@@ -92,14 +103,12 @@ The polling interval (in seconds) to query the API for status changes:
 ```
 
 {
-"platforms": [
-{
-// ... required config, see above
-"outletStatusPollInterval": <seconds>, // Defaults to 15
+  "platforms": [
+    {
+      // ... required config, see above
+      "outletStatusPollInterval": <seconds>, // Defaults to 15
+    }
+  ]
 }
-]
-}
-
-```
 
 ```
