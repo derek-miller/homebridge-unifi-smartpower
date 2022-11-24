@@ -1,6 +1,7 @@
 # homebridge-unifi-smartpower
 
 [![NPM Version](https://img.shields.io/npm/v/homebridge-unifi-smartpower.svg)](https://www.npmjs.com/package/homebridge-unifi-smartpower)
+[![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 
 # UniFi SmartPower Homebridge Platform Plugin
 
