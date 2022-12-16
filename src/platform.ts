@@ -62,7 +62,8 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
       deviceStatuses = await this.uniFiSmartPower.getDeviceStatuses();
     } catch (error: unknown) {
       this.log.error(
-        'Failed to get status from UniFi; verify host, port, username, and password are correct',
+        'Failed to get status from UniFi; verify host, port, username, and password are correct: ',
+        (<Error>error).message,
       );
       return;
     }
