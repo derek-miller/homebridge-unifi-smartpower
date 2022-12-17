@@ -63,7 +63,7 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
     } catch (error: unknown) {
       this.log.error(
         'Failed to get status from UniFi; verify host, port, username, and password are correct: ',
-        (<Error>error).message,
+        (<Error>error).stack || error,
       );
       return;
     }
