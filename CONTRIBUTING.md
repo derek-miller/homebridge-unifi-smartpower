@@ -39,7 +39,27 @@ homebridge -D
 ## Watch For Changes and Build Automatically
 
 If you want to have your code compile automatically as you make changes, and restart Homebridge
-automatically between changes you can run:
+automatically between changes, you first need to add your plugin as a platform in `./config/config.json`:
+
+```
+{
+...
+    "platforms": [
+        {
+            "name": "Config",
+            "port": 8581,
+            "platform": "config"
+        },
+        {
+            "name": "UniFi SmartPower",
+            "platform": "UniFiSmartPower"
+            //... any other options, as listed in config.schema.json ...
+        }
+    ]
+}
+```
+
+and then you can run:
 
 ```
 npm run watch
@@ -80,7 +100,7 @@ You can publish _beta_ versions of this plugin for other users to test before yo
 # create a new pre-release version (eg. 2.1.0-beta.1)
 npm version prepatch --preid beta
 
-# publsh to @beta
+# publish to @beta
 npm publish --tag=beta
 ```
 
