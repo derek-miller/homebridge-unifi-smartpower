@@ -41,6 +41,26 @@
           "hidden": true
         }
       },
+      "includeDevices": {
+        "title": "Include Devices",
+        "type": "array",
+        "default": [],
+        "required": false,
+        "items": {
+          "title": "Device ID",
+          "type": "string"
+        }
+      },
+      "excludeDevices": {
+        "title": "Exclude Devices",
+        "type": "array",
+        "default": [],
+        "required": false,
+        "items": {
+          "title": "Device ID",
+          "type": "string"
+        }
+      },
       "includeOutlets": {
         "title": "Include Outlets",
         "type": "array",
@@ -58,6 +78,32 @@
         "required": false,
         "items": {
           "title": "Outlet ID",
+          "type": "string"
+        }
+      },
+      "includeInactivePorts": {
+        "title": "Show ports that are not supplying PoE power",
+        "type": "boolean",
+        "default": false,
+        "required": false
+      },
+      "includePorts": {
+        "title": "Include Ports",
+        "type": "array",
+        "default": [],
+        "required": false,
+        "items": {
+          "title": "Port ID",
+          "type": "string"
+        }
+      },
+      "excludePorts": {
+        "title": "Exclude Ports",
+        "type": "array",
+        "default": [],
+        "required": false,
+        "items": {
+          "title": "Port ID",
           "type": "string"
         }
       },
@@ -99,8 +145,13 @@
       "title": "Advanced Settings",
       "description": "",
       "items": [
+        "includeDevices",
+        "excludeDevices",
         "includeOutlets",
         "excludeOutlets",
+        "includeInactivePorts",
+        "includePorts",
+        "excludePorts",
         "refreshDevicesPollInterval",
         "outletStatusCacheTtl",
         "outletStatusPollInterval"

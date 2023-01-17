@@ -43,21 +43,31 @@ for creating new users.
 
 ### Optional Configuration
 
-#### Include/Exclude Outlets
+#### Include/Exclude
 
-Outlets can be included or excluded by serial number and outlet number (see logs during startup):
+Devices, outlets, and/or ports can be included or excluded by their id (see logs during startup):
 
 ```
 {
   "platforms": [
     {
       // ... required config, see above
+      "includeDevices": ["<serial number>"], // Defaults to null
+      "excludeDevices": ["<serial number>"],  // Defaults to null
       "includeOutlets": ["<serial number>.<index>"], // Defaults to null
-      "excludeOutlets": ["<serial number>.<index>"]  // Defaults to null
+      "excludeOutlets": ["<serial number>.<index>"],  // Defaults to null
+      "includeInactivePorts": <true/false>, // Defaults to false
+      "includePorts": ["<serial number>.<index>"], // Defaults to null
+      "excludePorts": ["<serial number>.<index>"]  // Defaults to null
     }
   ]
 }
 ```
+
+NOTE: When `includeInactivePorts` is set to `true` all PoE capable ports will be added regardless if
+the switch is supplying power to a connected device or not. This is not recommended since the plugin
+will refresh and automatically add new ports when they become connected. Leaving this set to `false`
+will reduce clutter in the Home app by removing switches that do not control anything.
 
 ### Advanced Configuration
 

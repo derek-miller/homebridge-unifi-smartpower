@@ -22,7 +22,7 @@
     "prettier": "prettier --check src *.{yaml,json,md}",
     "prettier-fix": "prettier --write src *.{yaml,json,md}",
     "lint": "npm run eslint && npm run prettier",
-    "lint-fix": "npm run eslint-fix && npm run prettier-fix",
+    "lint-fix": "npm run eslint-fix; npm run prettier-fix",
     "fmt": "npm run lint-fix",
     "watch": "npm run build && npm link && nodemon",
     "build": "rimraf ./dist && tsc",
