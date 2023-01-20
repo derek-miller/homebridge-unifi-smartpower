@@ -41,6 +41,26 @@
           "hidden": true
         }
       },
+      "includeSites": {
+        "title": "Include Sites",
+        "type": "array",
+        "default": [],
+        "required": false,
+        "items": {
+          "title": "Site ID",
+          "type": "string"
+        }
+      },
+      "excludeSites": {
+        "title": "Exclude Sites",
+        "type": "array",
+        "default": [],
+        "required": false,
+        "items": {
+          "title": "Site ID",
+          "type": "string"
+        }
+      },
       "includeDevices": {
         "title": "Include Devices",
         "type": "array",
@@ -145,6 +165,8 @@
       "title": "Advanced Settings",
       "description": "",
       "items": [
+        "includeSites",
+        "excludeSites",
         "includeDevices",
         "excludeDevices",
         "includeOutlets",

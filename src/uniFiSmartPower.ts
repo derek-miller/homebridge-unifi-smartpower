@@ -13,6 +13,7 @@ export interface UniFiDeviceStatus {
 }
 
 export interface UniFiDevice {
+  site: string;
   id: string;
   ip: string;
   mac: string;
@@ -86,6 +87,11 @@ export interface UniFiControllerConfig {
   outletStatusCacheTtl?: number;
 }
 
+export interface UniFiSite {
+  id: string;
+  name: string;
+}
+
 export class UniFiSmartPower {
   private static readonly PUB_SUB_OUTLET_TOPIC = 'outlet';
 
@@ -98,7 +104,7 @@ export class UniFiSmartPower {
   private static readonly STATUS_POLL_INTERVAL_S_MIN = 5;
   private static readonly STATUS_POLL_INTERVAL_S_MAX = 60;
 
-  private static readonly DEVICE_STATUS_LOCK = 'OUTLET_STATUS';
+  private static readonly CONTROLLER_LOCK = 'CONTROLLER_LOCK';
 
   private readonly lock = new AsyncLock({ domainReentrant: true });
   private readonly cache: Promise<Cache>;
@@ -186,15 +192,41 @@ export class UniFiSmartPower {
     this.log.debug('[API] Status subscription removed for token %s', token);
   }
 
+  async getSites(): Promise<UniFiSite[]> {
+    return this.lock.acquire(UniFiSmartPower.CONTROLLER_LOCK, async () => {
+      this.log.debug('[API] Fetching sites from UniFi API');
+      await this.controller.login();
+      return (await this.controller.getSitesStats())
+        .filter(({ name }) => !!name)
+        .map(({ name: id, desc: name }) => ({
+          id,
+          name,
+        }));
+    });
+  }
+
+  async getDeviceStatuses(site: string, acquireLock?: boolean): Promise<UniFiDeviceStatus[]>;
+  async getDeviceStatuses(device: UniFiDevice, acquireLock?: boolean): Promise<UniFiDeviceStatus[]>;
+
   async getDeviceStatuses(
-    device: UniFiDevice | null = null,
+    siteOrDevice: string | UniFiDevice,
     acquireLock = true,
   ): Promise<UniFiDeviceStatus[]> {
+    let site: string;
+    let device: UniFiDevice | null;
+    if (typeof siteOrDevice === 'string') {
+      site = siteOrDevice;
+      device = null;
+    } else if (siteOrDevice) {
+      device = siteOrDevice;
+      site = device.site;
+    }
     const fetch = async (): Promise<UniFiDeviceStatus[]> =>
       (await this.cache).wrap(
         UniFiSmartPower.deviceCacheKey(device),
         async (): Promise<UniFiDeviceStatus[]> => {
           this.log.debug('[API] Fetching status from UniFi API');
+          this.controller.opts.site = site;
           await this.controller.login();
           return (await this.controller.getAccessDevices(device?.mac ?? ''))
             .filter(
@@ -202,29 +234,33 @@ export class UniFiSmartPower {
                 (device.outlet_table ?? []).length > 0 || (device.port_table ?? []).length > 0,
             )
             .map((device) =>
-              UniFiSmartPower.transformDeviceStatusResponse(device as UniFiApiDevice),
+              UniFiSmartPower.transformDeviceStatusResponse(site, device as UniFiApiDevice),
             );
         },
         this.statusCacheTtl,
       );
-    return acquireLock ? this.lock.acquire(UniFiSmartPower.DEVICE_STATUS_LOCK, fetch) : fetch();
+    return acquireLock ? this.lock.acquire(UniFiSmartPower.CONTROLLER_LOCK, fetch) : fetch();
   }
 
-  static transformDeviceStatusResponse({
-    _id: id,
-    ip,
-    mac,
-    model,
-    version,
-    serial: serialNumber,
-    name,
-    port_table: ports,
-    port_overrides: portOverrides,
-    outlet_table: outlets,
-    outlet_overrides: outletOverrides,
-  }: UniFiApiDevice): UniFiDeviceStatus {
+  static transformDeviceStatusResponse(
+    site: string,
+    {
+      _id: id,
+      ip,
+      mac,
+      model,
+      version,
+      serial: serialNumber,
+      name,
+      port_table: ports,
+      port_overrides: portOverrides,
+      outlet_table: outlets,
+      outlet_overrides: outletOverrides,
+    }: UniFiApiDevice,
+  ): UniFiDeviceStatus {
     return {
       device: {
+        site,
         id,
         ip,
         mac,
@@ -332,8 +368,10 @@ export class UniFiSmartPower {
     outletIndex: number,
     command: UniFiSmartPowerOutletAction,
   ): Promise<void> {
-    return this.lock.acquire(UniFiSmartPower.DEVICE_STATUS_LOCK, async () => {
+    return this.lock.acquire(UniFiSmartPower.CONTROLLER_LOCK, async () => {
       const { outlets } = await this.getDeviceStatus(device, false);
+      this.controller.opts.site = device.site;
+      await this.controller.login();
       await this.controller.setDeviceSettingsBase(device.id, {
         outlet_overrides: outlets.map((outlet) => ({
           ...outlet.override,
@@ -350,8 +388,10 @@ export class UniFiSmartPower {
     portIndex: number,
     poeMode: UniFiSwitchPortPoeModeAction,
   ): Promise<void> {
-    return this.lock.acquire(UniFiSmartPower.DEVICE_STATUS_LOCK, async () => {
+    return this.lock.acquire(UniFiSmartPower.CONTROLLER_LOCK, async () => {
       const { ports } = await this.getDeviceStatus(device, false);
+      this.controller.opts.site = device.site;
+      await this.controller.login();
       await this.controller.setDeviceSettingsBase(device.id, {
         port_overrides: ports.map((port) => ({
           ...port.override,
