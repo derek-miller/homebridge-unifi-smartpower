@@ -27,8 +27,8 @@ export interface UniFiSmartPowerOutlet {
   name: string;
   relayState: UniFiSmartPowerOutletState;
   inUse: UniFiPortOrOutletInUse;
-  entry: { [k: string]: never };
-  overrides: { [k: string]: never };
+  entry: UniFiApiDeviceOutletTable;
+  override: UniFiApiDeviceOutletOverride;
 }
 
 export interface UniFiSwitchPort {
@@ -38,11 +38,11 @@ export interface UniFiSwitchPort {
   poeOnAction: UniFiSwitchPortPoeModeAction;
   inUse: UniFiPortOrOutletInUse;
   active: boolean;
-  entry: { [k: string]: never };
-  overrides: { [k: string]: never };
+  entry: UniFiApiDeviceSwitchPortTable;
+  override: UniFiApiDeviceSwitchPortOverride;
 }
 
-export type UniFiSwitchPortPoeMode = 'unknown' | 'auto' | 'passthrough' | 'off';
+export type UniFiSwitchPortPoeMode = 'unknown' | 'auto' | 'passthrough' | 'pasv24' | 'off';
 export type UniFiSwitchPortPoeModeAction = 'auto' | 'passthrough' | 'pasv24' | 'off';
 
 export enum UniFiSmartPowerOutletState {
@@ -163,6 +163,7 @@ export class UniFiSmartPower {
               PubSub.publish(topic, await this.getPortStatus(device, index));
               break;
             default:
+              // noinspection ExceptionCaughtLocallyJS
               throw new Error('unknown device status kind=%d', kind);
           }
         } catch (error: unknown) {
@@ -200,7 +201,9 @@ export class UniFiSmartPower {
               (device) =>
                 (device.outlet_table ?? []).length > 0 || (device.port_table ?? []).length > 0,
             )
-            .map((device) => UniFiSmartPower.transformDeviceStatusResponse(device));
+            .map((device) =>
+              UniFiSmartPower.transformDeviceStatusResponse(device as UniFiApiDevice),
+            );
         },
         this.statusCacheTtl,
       );
@@ -219,7 +222,7 @@ export class UniFiSmartPower {
     port_overrides: portOverrides,
     outlet_table: outlets,
     outlet_overrides: outletOverrides,
-  }): UniFiDeviceStatus {
+  }: UniFiApiDevice): UniFiDeviceStatus {
     return {
       device: {
         id,
@@ -232,45 +235,46 @@ export class UniFiSmartPower {
       },
       ports: (
         ports
-          ?.filter(({ port_poe: isPoePort }) => isPoePort)
+          ?.filter(({ port_poe: isPoePort }) => !!isPoePort)
           .map(
-            ({
-              port_idx: index,
-              name,
-              poe_mode: poeMode,
-              poe_caps: poeCaps = null,
-              poe_power: poePower = null,
-              poe_enable: poeEnabled = null,
-            }) =>
-              ({
-                index,
-                name,
-                poeMode,
-                inUse: poePower === null ? -1 : parseFloat(poePower) > 0 ? 1 : 0,
-                active: !!poeEnabled,
-                poeOnAction: this.getPortPoeOnMode(poeCaps),
-                entry: ports.find((p) => p?.port_idx === index),
-                overrides: portOverrides.find((p) => p?.port_idx === index),
-              } as UniFiSwitchPort),
+            (entry: UniFiApiDeviceSwitchPortTable): UniFiSwitchPort => ({
+              index: entry.port_idx,
+              name: entry.name,
+              poeMode: entry.poe_mode || 'off',
+              inUse: !entry.poe_power ? -1 : parseFloat(entry.poe_power) > 0 ? 1 : 0,
+              active: !!entry.poe_enable,
+              poeOnAction: this.getPortPoeOnMode(entry.poe_caps),
+              entry,
+              override:
+                portOverrides?.find((p) => p?.port_idx === entry.port_idx) ??
+                (Object.fromEntries(
+                  Object.entries(entry).filter(([k]) =>
+                    ['port_idx', 'name', 'poe_mode', 'portconf_id'].includes(k),
+                  ),
+                ) as UniFiApiDeviceSwitchPortOverride),
+            }),
           ) ?? []
-      ).filter((p) => p.poeOnAction !== 'off' && p.overrides && p.entry),
+      ).filter((p) => p.poeOnAction !== 'off' && p.override && p.entry),
       outlets: (
         outlets?.map(
-          ({ index, name, relay_state: relayState, outlet_power: power = null }) =>
-            ({
-              index,
-              name,
-              relayState: relayState ? 1 : 0,
-              inUse: power === null ? -1 : parseFloat(power) > 0 ? 1 : 0,
-              entry: outlets.find((o) => o?.index === index),
-              overrides: outletOverrides.find((o) => o?.index === index),
-            } as UniFiSmartPowerOutlet),
+          (entry: UniFiApiDeviceOutletTable): UniFiSmartPowerOutlet => ({
+            index: entry.index,
+            name: entry.name,
+            relayState: entry.relay_state ? 1 : 0,
+            inUse: !entry.outlet_power ? -1 : parseFloat(entry.outlet_power) > 0 ? 1 : 0,
+            entry,
+            override:
+              outletOverrides?.find((o) => o?.index === entry.index) ??
+              (Object.fromEntries(
+                Object.entries(entry).filter(([k]) => ['index', 'name', 'relay_state'].includes(k)),
+              ) as UniFiApiDeviceOutletOverride),
+          }),
         ) ?? []
-      ).filter((o) => o.overrides && o.entry),
+      ).filter((o) => o.override && o.entry),
     };
   }
 
-  static getPortPoeOnMode(poeCaps: number | null | undefined): UniFiSwitchPortPoeModeAction | null {
+  static getPortPoeOnMode(poeCaps: number | null | undefined): UniFiSwitchPortPoeModeAction {
     if (
       // We already filter out non-poe ports and if it doesn't have cps then it supports auto
       poeCaps === undefined ||
@@ -332,7 +336,7 @@ export class UniFiSmartPower {
       const { outlets } = await this.getDeviceStatus(device, false);
       await this.controller.setDeviceSettingsBase(device.id, {
         outlet_overrides: outlets.map((outlet) => ({
-          ...outlet.overrides,
+          ...outlet.override,
           relay_state: outlet.index === outletIndex ? !!command : !!outlet.relayState,
         })),
       });
@@ -350,7 +354,7 @@ export class UniFiSmartPower {
       const { ports } = await this.getDeviceStatus(device, false);
       await this.controller.setDeviceSettingsBase(device.id, {
         port_overrides: ports.map((port) => ({
-          ...port.overrides,
+          ...port.override,
           poe_mode: port.index === portIndex ? poeMode : port.poeMode,
         })),
       });
@@ -389,3 +393,48 @@ export class UniFiSmartPower {
     return `${UniFiSmartPower.STATUS_CACHE_KEY}.${device?.id ?? 'ALL'}`;
   }
 }
+
+type UniFiApiDevice = {
+  _id: string;
+  ip: string;
+  mac: string;
+  model: string;
+  version: string;
+  serial: string;
+  name: string;
+  port_table: UniFiApiDeviceSwitchPortTable[] | null | undefined;
+  port_overrides: UniFiApiDeviceSwitchPortOverride[] | null | undefined;
+  outlet_table: UniFiApiDeviceOutletTable[] | null | undefined;
+  outlet_overrides: UniFiApiDeviceOutletOverride[] | null | undefined;
+};
+
+type UniFiApiDeviceSwitchPortTable = {
+  port_idx: number;
+  name: string;
+  port_poe?: boolean;
+  poe_mode?: UniFiSwitchPortPoeModeAction;
+  poe_caps?: number;
+  poe_power?: string;
+  poe_enable?: boolean;
+  // many others
+};
+
+type UniFiApiDeviceSwitchPortOverride = {
+  port_idx: number;
+  name: string;
+  poe_mode: UniFiSwitchPortPoeModeAction;
+};
+
+type UniFiApiDeviceOutletTable = {
+  index: number;
+  name: string;
+  relay_state: boolean;
+  outlet_power?: string;
+  outlet_caps?: number;
+};
+
+type UniFiApiDeviceOutletOverride = {
+  index: number;
+  name: string;
+  relay_state: boolean;
+};
