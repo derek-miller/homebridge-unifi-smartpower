@@ -45,13 +45,15 @@ for creating new users.
 
 #### Include/Exclude
 
-Devices, outlets, and/or ports can be included or excluded by their id (see logs during startup):
+Sites, devices, outlets, and/or ports can be included or excluded by their id (see logs during startup):
 
 ```
 {
   "platforms": [
     {
       // ... required config, see above
+      "includeSites": ["<site id>"], // Defaults to null
+      "excludeSites": ["<site id>"],  // Defaults to null
       "includeDevices": ["<serial number>"], // Defaults to null
       "excludeDevices": ["<serial number>"],  // Defaults to null
       "includeOutlets": ["<serial number>.<index>"], // Defaults to null
