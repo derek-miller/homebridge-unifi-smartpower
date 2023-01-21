@@ -267,7 +267,7 @@ export class UniFiSmartPower {
         model,
         version,
         serialNumber,
-        name,
+        name: name ?? model ?? serialNumber,
       },
       ports: (
         ports
@@ -275,7 +275,7 @@ export class UniFiSmartPower {
           .map(
             (entry: UniFiApiDeviceSwitchPortTable): UniFiSwitchPort => ({
               index: entry.port_idx,
-              name: entry.name,
+              name: entry.name ?? `Port ${entry.port_idx}`,
               poeMode: entry.poe_mode || 'off',
               inUse: !entry.poe_power ? -1 : parseFloat(entry.poe_power) > 0 ? 1 : 0,
               active: !!entry.poe_enable,
@@ -295,7 +295,7 @@ export class UniFiSmartPower {
         outlets?.map(
           (entry: UniFiApiDeviceOutletTable): UniFiSmartPowerOutlet => ({
             index: entry.index,
-            name: entry.name,
+            name: entry.name ?? `Outlet ${entry.index}`,
             relayState: entry.relay_state ? 1 : 0,
             inUse: !entry.outlet_power ? -1 : parseFloat(entry.outlet_power) > 0 ? 1 : 0,
             entry,
@@ -441,7 +441,7 @@ type UniFiApiDevice = {
   model: string;
   version: string;
   serial: string;
-  name: string;
+  name?: string;
   port_table: UniFiApiDeviceSwitchPortTable[] | null | undefined;
   port_overrides: UniFiApiDeviceSwitchPortOverride[] | null | undefined;
   outlet_table: UniFiApiDeviceOutletTable[] | null | undefined;
@@ -450,7 +450,7 @@ type UniFiApiDevice = {
 
 type UniFiApiDeviceSwitchPortTable = {
   port_idx: number;
-  name: string;
+  name?: string;
   port_poe?: boolean;
   poe_mode?: UniFiSwitchPortPoeModeAction;
   poe_caps?: number;
@@ -461,13 +461,13 @@ type UniFiApiDeviceSwitchPortTable = {
 
 type UniFiApiDeviceSwitchPortOverride = {
   port_idx: number;
-  name: string;
+  name?: string;
   poe_mode: UniFiSwitchPortPoeModeAction;
 };
 
 type UniFiApiDeviceOutletTable = {
   index: number;
-  name: string;
+  name?: string;
   relay_state: boolean;
   outlet_power?: string;
   outlet_caps?: number;
@@ -475,6 +475,6 @@ type UniFiApiDeviceOutletTable = {
 
 type UniFiApiDeviceOutletOverride = {
   index: number;
-  name: string;
+  name?: string;
   relay_state: boolean;
 };
