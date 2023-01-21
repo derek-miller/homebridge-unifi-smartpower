@@ -150,6 +150,11 @@
         "minimum": 5,
         "maximum": 60,
         "required": true
+      },
+      "logApiResponses": {
+        "title": "Log API responses during startup",
+        "type": "boolean",
+        "default": false
       }
     }
   },
@@ -176,7 +181,8 @@
         "excludePorts",
         "refreshDevicesPollInterval",
         "outletStatusCacheTtl",
-        "outletStatusPollInterval"
+        "outletStatusPollInterval",
+        "logApiResponses"
       ]
     }
   ]

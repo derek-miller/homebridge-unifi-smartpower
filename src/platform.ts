@@ -33,6 +33,7 @@ type UniFiSmartPowerHomebridgePlatformConfig = PlatformConfig &
     includeInactivePorts?: boolean;
     excludePorts?: string[];
     includePorts?: string[];
+    logApiResponses?: boolean;
   };
 
 export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin {
@@ -73,6 +74,9 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
     let sites: UniFiSite[];
     try {
       sites = await this.uniFiSmartPower.getSites();
+      if (this.config.logApiResponses) {
+        this.log.info('SITES: ', JSON.stringify(sites, null, '  '));
+      }
     } catch (error: unknown) {
       this.log.error(
         'Failed to get sites from UniFi; verify host, port, username, and password are correct: ',
@@ -94,6 +98,9 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
       let deviceStatuses: UniFiDeviceStatus[];
       try {
         deviceStatuses = await this.uniFiSmartPower.getDeviceStatuses(site.id);
+        if (this.config.logApiResponses) {
+          this.log.info('SITE: %S DEVICES:', site.id, JSON.stringify(deviceStatuses, null, '  '));
+        }
       } catch (error: unknown) {
         this.log.error(
           'Failed to get status from UniFi; verify host, port, username, and password are correct: ',
