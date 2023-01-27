@@ -267,7 +267,7 @@ export class UniFiSmartPower {
         model,
         version,
         serialNumber,
-        name: name ?? model ?? serialNumber,
+        name: name || model || serialNumber,
       },
       ports: (
         ports
