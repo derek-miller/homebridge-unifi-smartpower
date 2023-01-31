@@ -101,12 +101,6 @@
           "type": "string"
         }
       },
-      "includeInactivePorts": {
-        "title": "Show ports that are not supplying PoE power",
-        "type": "boolean",
-        "default": false,
-        "required": false
-      },
       "includePorts": {
         "title": "Include Ports",
         "type": "array",
@@ -125,6 +119,12 @@
         "items": {
           "title": "Port ID",
           "type": "string"
+        },
+        "includeInactivePorts": {
+          "title": "Show ports that are not supplying PoE power",
+          "type": "boolean",
+          "default": false,
+          "required": false
         }
       },
       "refreshDevicesPollInterval": {
@@ -158,27 +158,75 @@
       }
     }
   },
-  "form": [
+  "layout": [
     "name",
     "host",
     "port",
     "username",
     "password",
     {
-      "type": "fieldset",
-      "expandable": true,
+      "type": "section",
       "title": "Advanced Settings",
-      "description": "",
+      "expandable": true,
+      "expanded": false,
       "items": [
-        "includeSites",
-        "excludeSites",
-        "includeDevices",
-        "excludeDevices",
-        "includeOutlets",
-        "excludeOutlets",
+        {
+          "key": "includeSites",
+          "type": "array",
+          "name": "Included Sites",
+          "orderable": false,
+          "items": ["includeSites[]"]
+        },
+        {
+          "key": "excludeSites",
+          "type": "array",
+          "name": "Excluded Sites",
+          "orderable": false,
+          "items": ["excludeSites[]"]
+        },
+        {
+          "key": "includeDevices",
+          "type": "array",
+          "name": "Included Devices",
+          "orderable": false,
+          "items": ["includeDevices[]"]
+        },
+        {
+          "key": "excludeDevices",
+          "type": "array",
+          "name": "Excluded Devices",
+          "orderable": false,
+          "items": ["excludeDevices[]"]
+        },
+        {
+          "key": "includeOutlets",
+          "type": "array",
+          "name": "Included Outlets",
+          "orderable": false,
+          "items": ["includeOutlets[]"]
+        },
+        {
+          "key": "excludeOutlets",
+          "type": "array",
+          "name": "Excluded Outlets",
+          "orderable": false,
+          "items": ["excludeOutlets[]"]
+        },
+        {
+          "key": "includePorts",
+          "type": "array",
+          "name": "Included Ports",
+          "orderable": false,
+          "items": ["includePorts[]"]
+        },
+        {
+          "key": "excludePorts",
+          "type": "array",
+          "name": "Excluded Ports",
+          "orderable": false,
+          "items": ["excludePorts[]"]
+        },
         "includeInactivePorts",
-        "includePorts",
-        "excludePorts",
         "refreshDevicesPollInterval",
         "outletStatusCacheTtl",
         "outletStatusPollInterval",
