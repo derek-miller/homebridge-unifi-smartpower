@@ -2,7 +2,7 @@ import { Characteristic, CharacteristicValue, Logger, PlatformAccessory } from '
 
 import { UniFiSmartPowerHomebridgePlatform } from './platform';
 
-export interface UniFiDisableControlPlatformAccessoryContext {
+export interface UniFiControlSwitchPlatformAccessoryContext {
   switchName: string;
   manufacturer: string;
   model: string;
@@ -10,9 +10,9 @@ export interface UniFiDisableControlPlatformAccessoryContext {
   timeout?: number;
 }
 
-export class UniFiDisableControlPlatformAccessory {
+export class UniFiControlSwitchPlatformAccessory {
   private readonly log: Logger;
-  private readonly context: UniFiDisableControlPlatformAccessoryContext;
+  private readonly context: UniFiControlSwitchPlatformAccessoryContext;
   private readonly switchName: string;
   private readonly manufacturer: string;
   private readonly model: string;
@@ -20,7 +20,7 @@ export class UniFiDisableControlPlatformAccessory {
   private readonly timeout: number;
   private readonly id: string;
 
-  private disabled = true;
+  private enabled = false;
   private onCharacteristic: Characteristic;
 
   constructor(
@@ -28,7 +28,7 @@ export class UniFiDisableControlPlatformAccessory {
     private readonly accessory: PlatformAccessory,
   ) {
     this.log = this.platform.log;
-    this.context = <UniFiDisableControlPlatformAccessoryContext>this.accessory.context;
+    this.context = <UniFiControlSwitchPlatformAccessoryContext>this.accessory.context;
     this.switchName = this.context.switchName;
     this.manufacturer = this.context.manufacturer;
     this.model = this.context.model;
@@ -51,30 +51,30 @@ export class UniFiDisableControlPlatformAccessory {
 
   private setOn(value: CharacteristicValue): void {
     this.log.debug('[%s] Set Characteristic On ->', this.switchName, value);
-    this.disabled = !!value;
-    if (!this.disabled && this.timeout > 0) {
+    this.enabled = !!value;
+    if (this.enabled && this.timeout > 0) {
       setTimeout(() => {
         // Ignore if it has already been re-disabled.
-        if (this.disabled) {
+        if (!this.enabled) {
           return;
         }
-        this.disabled = true;
+        this.enabled = false;
         this.log.debug(
           '[%s] Update Characteristic On due to enabled timeout ->',
           this.switchName,
-          this.disabled,
+          this.enabled,
         );
-        this.onCharacteristic.updateValue(this.disabled);
+        this.onCharacteristic.updateValue(this.enabled);
       }, this.timeout * 1000);
     }
   }
 
   private getOn(): CharacteristicValue {
-    this.log.debug('[%s] Get Characteristic On ->', this.switchName, this.disabled);
-    return this.isDisabled();
+    this.log.debug('[%s] Get Characteristic On ->', this.switchName, this.enabled);
+    return this.isEnabled();
   }
 
-  public isDisabled() {
-    return this.disabled;
+  public isEnabled() {
+    return this.enabled;
   }
 }

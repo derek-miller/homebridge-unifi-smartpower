@@ -41,7 +41,7 @@
           "hidden": true
         }
       },
-      "disableSwitch": {
+      "controlSwitch": {
         "type": "object",
         "default": {},
         "required": false,
@@ -55,12 +55,12 @@
           "name": {
             "title": "Name",
             "type": "string",
-            "default": "Disable Control",
+            "default": "UniFi Control Enabled",
             "minLength": 1,
             "required": false
           },
           "timeout": {
-            "title": "Timeout (in seconds) before the disable switch reverts to ON. Defaults to 60s. 0 disables the timeout.",
+            "title": "Timeout (in seconds) before the control switch reverts. Defaults to 60s. 0 disables the timeout.",
             "type": "integer",
             "default": 60,
             "minimum": 0,
@@ -199,11 +199,11 @@
       "items": [
         {
           "type": "section",
-          "title": "Disable Switch",
+          "title": "Control Switch",
           "items": [
-            "disableSwitch.create",
-            "disableSwitch.name",
-            "disableSwitch.timeout"
+            "controlSwitch.create",
+            "controlSwitch.name",
+            "controlSwitch.timeout"
           ]
         },
         {

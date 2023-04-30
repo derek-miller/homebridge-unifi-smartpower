@@ -43,21 +43,21 @@ for creating new users.
 
 ### Optional Configuration
 
-#### Disable Control Switch
+#### Control Switch
 
 Considering how easy it is to accidentally command an outlet/switch from HomeKit
-you can optionally add a switch to disable control. When on, commands to control
-an outlet/switch will be ignored:
+you can optionally add a switch to enable/disable control. When disabled,
+commands to control an outlet/switch will be ignored:
 
 ```
 {
   "platforms": [
     {
       // ... required config, see above
-      "disableSwitch": {
-        "create": <true/false>, // Defaults to false
-        "name": "<name>" // Defaults to "Disable Control"
-        "timeout": <number> // Timeout (in seconds) before the disable switch reverts to ON. Defaults to 60s. 0 disables the timeout.
+      "controlSwitch": {
+        "create": <true/false>, // Defaults to false.
+        "name": "<name>" // Defaults to "UniFi Control Enabled".
+        "timeout": <number> // Timeout (in seconds) before the control switch reverts. Defaults to 60s. 0 disables the timeout.
       }
     }
   ]
