@@ -41,6 +41,33 @@
           "hidden": true
         }
       },
+      "disableSwitch": {
+        "type": "object",
+        "default": {},
+        "required": false,
+        "properties": {
+          "create": {
+            "title": "Create Switch",
+            "type": "boolean",
+            "default": false,
+            "required": false
+          },
+          "name": {
+            "title": "Name",
+            "type": "string",
+            "default": "Disable Control",
+            "minLength": 1,
+            "required": false
+          },
+          "timeout": {
+            "title": "Timeout (in seconds) before the disable switch reverts to ON. Defaults to 60s. 0 disables the timeout.",
+            "type": "integer",
+            "default": 60,
+            "minimum": 0,
+            "required": false
+          }
+        }
+      },
       "includeSites": {
         "title": "Include Sites",
         "type": "array",
@@ -170,6 +197,15 @@
       "expandable": true,
       "expanded": false,
       "items": [
+        {
+          "type": "section",
+          "title": "Disable Switch",
+          "items": [
+            "disableSwitch.create",
+            "disableSwitch.name",
+            "disableSwitch.timeout"
+          ]
+        },
         {
           "key": "includeSites",
           "type": "array",

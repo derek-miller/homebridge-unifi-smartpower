@@ -16,6 +16,7 @@ import {
 
 export interface UniFiDevicePlatformAccessoryContext {
   device: UniFiDevice;
+  isDisabled: () => boolean;
 }
 
 export class UniFiSmartPowerOutletPlatformAccessory {
@@ -26,6 +27,7 @@ export class UniFiSmartPowerOutletPlatformAccessory {
   private readonly outletIndex: number;
   private readonly outletName: string;
   private readonly serialNumber: string;
+  private readonly isDisabled: () => boolean;
   private readonly id: string;
 
   private status = UniFiSmartPowerOutletState.UNKNOWN;
@@ -43,6 +45,7 @@ export class UniFiSmartPowerOutletPlatformAccessory {
     this.serialNumber = this.context.device.serialNumber;
     this.outletIndex = this.outlet.index;
     this.outletName = this.outlet.name;
+    this.isDisabled = this.context.isDisabled;
     this.id = `${this.serialNumber}.${this.outletIndex}`;
 
     const outletService = (this.accessory.getServiceById(this.platform.Service.Outlet, this.id) ||
@@ -95,6 +98,10 @@ export class UniFiSmartPowerOutletPlatformAccessory {
   }
 
   private async setOn(value: CharacteristicValue): Promise<void> {
+    if (this.isDisabled()) {
+      this.log.info('[%s] Cannot set Characteristic On when disabled', this.outletName);
+      throw new this.hap.HapStatusError(this.hap.HAPStatus.READ_ONLY_CHARACTERISTIC);
+    }
     this.log.debug('[%s] Set Characteristic On ->', this.outletName, value);
     try {
       await this.uniFiSmartPower.commandOutlet(
@@ -146,6 +153,7 @@ export class UniFiSwitchPortPlatformAccessory {
   private readonly portName: string;
   private readonly portPoeOnAction: UniFiSwitchPortPoeModeAction;
   private readonly serialNumber: string;
+  private readonly isDisabled: () => boolean;
   private readonly id: string;
 
   private poeMode: UniFiSwitchPortPoeMode = 'unknown';
@@ -164,6 +172,7 @@ export class UniFiSwitchPortPlatformAccessory {
     this.portIndex = this.port.index;
     this.portName = this.port.name;
     this.portPoeOnAction = this.port.poeOnAction;
+    this.isDisabled = this.context.isDisabled;
     this.id = `${this.serialNumber}.${this.portIndex}`;
 
     const outletService = (this.accessory.getServiceById(this.platform.Service.Outlet, this.id) ||
@@ -214,6 +223,10 @@ export class UniFiSwitchPortPlatformAccessory {
   }
 
   private async setOn(value: CharacteristicValue): Promise<void> {
+    if (this.isDisabled()) {
+      this.log.info('[%s] Cannot set Characteristic On when disabled', this.portName);
+      throw new this.hap.HapStatusError(this.hap.HAPStatus.READ_ONLY_CHARACTERISTIC);
+    }
     this.log.debug('[%s] Set Characteristic On ->', this.portName, value);
     try {
       await this.uniFiSmartPower.commandPort(

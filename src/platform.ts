@@ -21,9 +21,14 @@ import {
   UniFiDeviceStatus,
   UniFiSite,
 } from './uniFiSmartPower';
+import {
+  UniFiDisableControlPlatformAccessory,
+  UniFiDisableControlPlatformAccessoryContext,
+} from './platformAccessoryDisableSwitch';
 
 type UniFiSmartPowerHomebridgePlatformConfig = PlatformConfig &
   UniFiControllerConfig & {
+    disableSwitch?: UniFiDisableControlConfig;
     includeSites?: string[];
     excludeSites?: string[];
     includeDevices?: string[];
@@ -35,6 +40,12 @@ type UniFiSmartPowerHomebridgePlatformConfig = PlatformConfig &
     includePorts?: string[];
     logApiResponses?: boolean;
   };
+
+interface UniFiDisableControlConfig {
+  create?: boolean;
+  name?: string;
+  timeout?: number;
+}
 
 export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin {
   private static readonly REFRESH_DEVICES_POLL_INTERVAL_S_DEFAULT = 10 * 60 * 1000; // 10m
@@ -71,6 +82,34 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
   async discoverDevices() {
     this.uniFiSmartPower.reset();
 
+    const uuids: Set<string> = new Set();
+    let isDisabled = () => false;
+    if (this.config.disableSwitch?.create) {
+      const { name: switchName = 'Disable Control', timeout = 0 } = this.config.disableSwitch;
+      const uuid = this.api.hap.uuid.generate('');
+      const existingAccessory = this.accessories.find((accessory) => accessory.UUID === uuid);
+      const accessory = existingAccessory ?? new this.api.platformAccessory(switchName, uuid);
+      uuids.add(uuid);
+
+      // Update the accessory context with the outlet.
+      accessory.context = <UniFiDisableControlPlatformAccessoryContext>{
+        switchName,
+        manufacturer: 'Ubiquiti',
+        model: '',
+        serialNumber: '',
+        timeout,
+      };
+      if (existingAccessory) {
+        this.log.info('Restoring existing accessory from cache:', accessory.displayName);
+        this.api.updatePlatformAccessories([accessory]);
+      } else {
+        this.log.info('Adding new accessory:', switchName);
+        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        this.accessories.push(accessory);
+      }
+      const disable = new UniFiDisableControlPlatformAccessory(this, accessory);
+      isDisabled = () => disable.isDisabled();
+    }
     let sites: UniFiSite[];
     try {
       sites = await this.uniFiSmartPower.getSites();
@@ -85,7 +124,6 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
       return;
     }
 
-    const uuids: Set<string> = new Set();
     for (const site of sites) {
       if (Array.isArray(this.config.excludeSites) && this.config.excludeSites.includes(site.id)) {
         continue;
@@ -131,6 +169,7 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         // Update the accessory context with the general info.
         accessory.context = <UniFiDevicePlatformAccessoryContext>{
           device: deviceStatus.device,
+          isDisabled,
         };
 
         // Monkeypatch accessory methods for getting services in order to identify orphaned services

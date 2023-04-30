@@ -43,6 +43,27 @@ for creating new users.
 
 ### Optional Configuration
 
+#### Disable Control Switch
+
+Considering how easy it is to accidentally command an outlet/switch from HomeKit
+you can optionally add a switch to disable control. When on, commands to control
+an outlet/switch will be ignored:
+
+```
+{
+  "platforms": [
+    {
+      // ... required config, see above
+      "disableSwitch": {
+        "create": <true/false>, // Defaults to false
+        "name": "<name>" // Defaults to "Disable Control"
+        "timeout": <number> // Timeout (in seconds) before the disable switch reverts to ON. Defaults to 60s. 0 disables the timeout.
+      }
+    }
+  ]
+}
+```
+
 #### Include/Exclude
 
 Sites, devices, outlets, and/or ports can be included or excluded by their id (see logs during startup):
