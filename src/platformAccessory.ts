@@ -16,7 +16,6 @@ import {
 
 export interface UniFiDevicePlatformAccessoryContext {
   device: UniFiDevice;
-  isEnabled: () => boolean;
 }
 
 export class UniFiSmartPowerOutletPlatformAccessory {
@@ -27,7 +26,6 @@ export class UniFiSmartPowerOutletPlatformAccessory {
   private readonly outletIndex: number;
   private readonly outletName: string;
   private readonly serialNumber: string;
-  private readonly isEnabled: () => boolean;
   private readonly id: string;
 
   private status = UniFiSmartPowerOutletState.UNKNOWN;
@@ -37,6 +35,7 @@ export class UniFiSmartPowerOutletPlatformAccessory {
     private readonly platform: UniFiSmartPowerHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
     private readonly outlet: UniFiSmartPowerOutlet,
+    private readonly isEnabled: () => boolean,
   ) {
     this.log = this.platform.log;
     this.hap = this.platform.api.hap;
@@ -45,7 +44,6 @@ export class UniFiSmartPowerOutletPlatformAccessory {
     this.serialNumber = this.context.device.serialNumber;
     this.outletIndex = this.outlet.index;
     this.outletName = this.outlet.name;
-    this.isEnabled = this.context.isEnabled;
     this.id = `${this.serialNumber}.${this.outletIndex}`;
 
     const outletService = (this.accessory.getServiceById(this.platform.Service.Outlet, this.id) ||
@@ -153,7 +151,6 @@ export class UniFiSwitchPortPlatformAccessory {
   private readonly portName: string;
   private readonly portPoeOnAction: UniFiSwitchPortPoeModeAction;
   private readonly serialNumber: string;
-  private readonly isEnabled: () => boolean;
   private readonly id: string;
 
   private poeMode: UniFiSwitchPortPoeMode = 'unknown';
@@ -163,6 +160,7 @@ export class UniFiSwitchPortPlatformAccessory {
     private readonly platform: UniFiSmartPowerHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
     private readonly port: UniFiSwitchPort,
+    private readonly isEnabled: () => boolean,
   ) {
     this.log = this.platform.log;
     this.hap = this.platform.api.hap;
@@ -172,7 +170,6 @@ export class UniFiSwitchPortPlatformAccessory {
     this.portIndex = this.port.index;
     this.portName = this.port.name;
     this.portPoeOnAction = this.port.poeOnAction;
-    this.isEnabled = this.context.isEnabled;
     this.id = `${this.serialNumber}.${this.portIndex}`;
 
     const outletService = (this.accessory.getServiceById(this.platform.Service.Outlet, this.id) ||
