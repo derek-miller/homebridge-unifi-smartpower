@@ -55,9 +55,11 @@ commands to control an outlet/switch will be ignored:
     {
       // ... required config, see above
       "controlSwitch": {
-        "create": <true/false>, // Defaults to false.
-        "name": "<name>" // Defaults to "UniFi Control Enabled".
-        "timeout": <number> // Timeout (in seconds) before the control switch reverts. Defaults to 60s. 0 disables the timeout.
+        "create": <true/false>,          // Defaults to false.
+        "name": "<name>",                // Defaults to "UniFi Control Enabled".
+        "timeout": <number>,             // Timeout (in seconds) before the control switch reverts. Defaults to 60s. 0 disables the timeout.
+        "guardOutlets": <true/false>,    // If true, outlets will be guarded by this control switch. Defaults to true.
+        "guardSwitchPorts": <true/false> // If true, switch ports will be guarded by this control switch. Defaults to true.
       }
     }
   ]
@@ -73,15 +75,15 @@ Sites, devices, outlets, and/or ports can be included or excluded by their id (s
   "platforms": [
     {
       // ... required config, see above
-      "includeSites": ["<site id>"], // Defaults to null
-      "excludeSites": ["<site id>"],  // Defaults to null
-      "includeDevices": ["<serial number>"], // Defaults to null
-      "excludeDevices": ["<serial number>"],  // Defaults to null
-      "includeOutlets": ["<serial number>.<index>"], // Defaults to null
-      "excludeOutlets": ["<serial number>.<index>"],  // Defaults to null
-      "includeInactivePorts": <true/false>, // Defaults to false
-      "includePorts": ["<serial number>.<index>"], // Defaults to null
-      "excludePorts": ["<serial number>.<index>"]  // Defaults to null
+      "includeSites": ["<site id>"],
+      "excludeSites": ["<site id>"],
+      "includeDevices": ["<serial number>"],
+      "excludeDevices": ["<serial number>"],
+      "includeOutlets": ["<serial number>.<index>"],
+      "excludeOutlets": ["<serial number>.<index>"],
+      "includeInactivePorts": <true/false>,          // Defaults to false
+      "includePorts": ["<serial number>.<index>"],
+      "excludePorts": ["<serial number>.<index>"]
     }
   ]
 }

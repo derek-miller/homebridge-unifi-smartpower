@@ -60,10 +60,25 @@
             "required": false
           },
           "timeout": {
-            "title": "Timeout (in seconds) before the control switch reverts. Defaults to 60s. 0 disables the timeout.",
+            "title": "Timeout",
+            "description": "Number of seconds before the control switch reverts. 0 disables the timeout.",
             "type": "integer",
             "default": 60,
             "minimum": 0,
+            "required": false
+          },
+          "guardOutlets": {
+            "title": "Guard Outlets",
+            "description": "If true, outlets will be guarded by this control switch.",
+            "type": "boolean",
+            "default": true,
+            "required": false
+          },
+          "guardSwitchPorts": {
+            "title": "Guard Switch Ports",
+            "description": "If true, switch ports will be guarded by this control switch.",
+            "type": "boolean",
+            "default": true,
             "required": false
           }
         }
@@ -203,7 +218,9 @@
           "items": [
             "controlSwitch.create",
             "controlSwitch.name",
-            "controlSwitch.timeout"
+            "controlSwitch.timeout",
+            "controlSwitch.guardOutlets",
+            "controlSwitch.guardSwitchPorts"
           ]
         },
         {

@@ -45,12 +45,14 @@ interface UniFiControlSwitchConfig {
   create?: boolean;
   name?: string;
   timeout?: number;
+  guardOutlets?: boolean;
+  guardSwitchPorts?: boolean;
 }
 
 export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin {
-  private static readonly REFRESH_DEVICES_POLL_INTERVAL_S_DEFAULT = 10 * 60 * 1000; // 10m
-  private static readonly REFRESH_DEVICES_POLL_INTERVAL_S_MIN = 2 * 60 * 1000; // 2m
-  private static readonly REFRESH_DEVICES_POLL_INTERVAL_S_MAX = 60 * 60 * 1000; // 60m
+  private static readonly REFRESH_DEVICES_POLL_INTERVAL_MS_DEFAULT = 10 * 60 * 1000; // 10m
+  private static readonly REFRESH_DEVICES_POLL_INTERVAL_MS_MIN = 2 * 60 * 1000; // 2m
+  private static readonly REFRESH_DEVICES_POLL_INTERVAL_MS_MAX = 60 * 60 * 1000; // 60m
 
   public readonly Service: typeof Service;
   public readonly Characteristic: typeof Characteristic;
@@ -83,9 +85,18 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
     this.uniFiSmartPower.reset();
 
     const uuids: Set<string> = new Set();
-    let isEnabled = () => true;
-    if (this.config.controlSwitch?.create) {
-      const { name: switchName = 'UniFi Control Enabled', timeout = 0 } = this.config.controlSwitch;
+    let isOutletEnabled = () => true;
+    let isSwitchPortEnabled = () => true;
+    if (
+      this.config.controlSwitch?.create &&
+      (this.config.controlSwitch.guardOutlets || this.config.controlSwitch.guardSwitchPorts)
+    ) {
+      const {
+        name: switchName = 'UniFi Control Enabled',
+        timeout = 0,
+        guardOutlets = true,
+        guardSwitchPorts = true,
+      } = this.config.controlSwitch;
       const uuid = this.api.hap.uuid.generate('');
       const existingAccessory = this.accessories.find((accessory) => accessory.UUID === uuid);
       const accessory = existingAccessory ?? new this.api.platformAccessory(switchName, uuid);
@@ -98,6 +109,8 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         model: 'Control Switch',
         serialNumber: '1.0.0',
         timeout,
+        guardOutlets,
+        guardSwitchPorts,
       };
       if (existingAccessory) {
         this.log.info('Restoring existing accessory from cache:', accessory.displayName);
@@ -108,7 +121,12 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         this.accessories.push(accessory);
       }
       const control = new UniFiControlSwitchPlatformAccessory(this, accessory);
-      isEnabled = () => control.isEnabled();
+      if (this.config.controlSwitch.guardOutlets) {
+        isOutletEnabled = () => control.isEnabled();
+      }
+      if (this.config.controlSwitch.guardSwitchPorts) {
+        isSwitchPortEnabled = () => control.isEnabled();
+      }
     }
     let sites: UniFiSite[];
     try {
@@ -169,7 +187,6 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         // Update the accessory context with the general info.
         accessory.context = <UniFiDevicePlatformAccessoryContext>{
           device: deviceStatus.device,
-          isEnabled,
         };
 
         // Monkeypatch accessory methods for getting services in order to identify orphaned services
@@ -223,7 +240,7 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
             `Outlet [${deviceStatus.device.serialNumber}.${outlet.index}]: ${deviceStatus.device.name} > ${outlet.name}`,
           );
           hasAnyAccessories = true;
-          new UniFiSmartPowerOutletPlatformAccessory(this, accessory, outlet);
+          new UniFiSmartPowerOutletPlatformAccessory(this, accessory, outlet, isOutletEnabled);
         }
 
         for (const port of deviceStatus.ports) {
@@ -251,7 +268,7 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
             `Port [${deviceStatus.device.serialNumber}.${port.index}]: ${deviceStatus.device.name} > ${port.name}`,
           );
           hasAnyAccessories = true;
-          new UniFiSwitchPortPlatformAccessory(this, accessory, port);
+          new UniFiSwitchPortPlatformAccessory(this, accessory, port, isSwitchPortEnabled);
         }
 
         patches.forEach((unpatch) => unpatch());
@@ -295,15 +312,13 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
   }
 
   private get refreshDevicesPollIntervalMs(): number {
-    return (
-      Math.max(
-        UniFiSmartPowerHomebridgePlatform.REFRESH_DEVICES_POLL_INTERVAL_S_MIN,
-        Math.min(
-          UniFiSmartPowerHomebridgePlatform.REFRESH_DEVICES_POLL_INTERVAL_S_MAX,
-          this.config.refreshDevicesPollInterval ??
-            UniFiSmartPowerHomebridgePlatform.REFRESH_DEVICES_POLL_INTERVAL_S_DEFAULT,
-        ),
-      ) * 1000
+    return Math.max(
+      UniFiSmartPowerHomebridgePlatform.REFRESH_DEVICES_POLL_INTERVAL_MS_MIN,
+      Math.min(
+        UniFiSmartPowerHomebridgePlatform.REFRESH_DEVICES_POLL_INTERVAL_MS_MAX,
+        (this.config.refreshDevicesPollInterval ?? 0) * 1000 ||
+          UniFiSmartPowerHomebridgePlatform.REFRESH_DEVICES_POLL_INTERVAL_MS_DEFAULT,
+      ),
     );
   }
 }
