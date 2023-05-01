@@ -96,13 +96,13 @@ export class UniFiSmartPower {
   private static readonly PUB_SUB_OUTLET_TOPIC = 'outlet';
 
   private static readonly STATUS_CACHE_KEY = 'outlet-status';
-  private static readonly STATUS_CACHE_TTL_S_DEFAULT = 15;
-  private static readonly STATUS_CACHE_TTL_S_MIN = 5;
-  private static readonly STATUS_CACHE_TTL_S_MAX = 60;
+  private static readonly STATUS_CACHE_TTL_MS_DEFAULT = 15 * 1000;
+  private static readonly STATUS_CACHE_TTL_MS_MIN = 5 * 1000;
+  private static readonly STATUS_CACHE_TTL_MS_MAX = 60 * 1000;
 
-  private static readonly STATUS_POLL_INTERVAL_S_DEFAULT = 15;
-  private static readonly STATUS_POLL_INTERVAL_S_MIN = 5;
-  private static readonly STATUS_POLL_INTERVAL_S_MAX = 60;
+  private static readonly STATUS_POLL_INTERVAL_MS_DEFAULT = 15 * 1000;
+  private static readonly STATUS_POLL_INTERVAL_MS_MIN = 5 * 1000;
+  private static readonly STATUS_POLL_INTERVAL_MS_MAX = 60 * 1000;
 
   private static readonly CONTROLLER_LOCK = 'CONTROLLER_LOCK';
 
@@ -237,7 +237,7 @@ export class UniFiSmartPower {
               UniFiSmartPower.transformDeviceStatusResponse(site, device as UniFiApiDevice),
             );
         },
-        this.statusCacheTtl,
+        this.statusCacheTtlMs,
       );
     return acquireLock ? this.lock.acquire(UniFiSmartPower.CONTROLLER_LOCK, fetch) : fetch();
   }
@@ -403,25 +403,25 @@ export class UniFiSmartPower {
     });
   }
 
-  private get statusCacheTtl(): number {
+  private get statusCacheTtlMs(): number {
     return Math.max(
-      UniFiSmartPower.STATUS_CACHE_TTL_S_MIN,
+      UniFiSmartPower.STATUS_CACHE_TTL_MS_MIN,
       Math.min(
-        UniFiSmartPower.STATUS_CACHE_TTL_S_MAX,
-        this.config.outletStatusCacheTtl ?? UniFiSmartPower.STATUS_CACHE_TTL_S_DEFAULT,
+        UniFiSmartPower.STATUS_CACHE_TTL_MS_MAX,
+        (this.config.outletStatusCacheTtl ?? 0) * 1000 ||
+          UniFiSmartPower.STATUS_CACHE_TTL_MS_DEFAULT,
       ),
     );
   }
 
   private get statusPollIntervalMs(): number {
-    return (
-      Math.max(
-        UniFiSmartPower.STATUS_POLL_INTERVAL_S_MIN,
-        Math.min(
-          UniFiSmartPower.STATUS_POLL_INTERVAL_S_MAX,
-          this.config.outletStatusPollInterval ?? UniFiSmartPower.STATUS_POLL_INTERVAL_S_DEFAULT,
-        ),
-      ) * 1000
+    return Math.max(
+      UniFiSmartPower.STATUS_POLL_INTERVAL_MS_MIN,
+      Math.min(
+        UniFiSmartPower.STATUS_POLL_INTERVAL_MS_MAX,
+        (this.config.outletStatusPollInterval ?? 0) * 1000 ||
+          UniFiSmartPower.STATUS_POLL_INTERVAL_MS_DEFAULT,
+      ),
     );
   }
 
