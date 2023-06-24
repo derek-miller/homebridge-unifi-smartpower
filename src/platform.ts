@@ -25,6 +25,7 @@ import {
   UniFiControlSwitchPlatformAccessory,
   UniFiControlSwitchPlatformAccessoryContext,
 } from './platformAccessoryControlSwitch';
+import { LogLevel } from 'homebridge/lib/logger';
 
 type UniFiSmartPowerHomebridgePlatformConfig = PlatformConfig &
   UniFiControllerConfig & {
@@ -60,6 +61,8 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
   public readonly config: UniFiSmartPowerHomebridgePlatformConfig;
   public readonly uniFiSmartPower: UniFiSmartPower;
 
+  private initialized = false;
+
   constructor(
     public readonly log: Logger,
     public readonly platformConfig: PlatformConfig,
@@ -71,6 +74,7 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
     this.uniFiSmartPower = new UniFiSmartPower(log, this.config);
     const refreshDevices = async () => {
       await this.discoverDevices();
+      this.initialized = true;
       setTimeout(refreshDevices, this.refreshDevicesPollIntervalMs);
     };
     this.api.on(APIEvent.DID_FINISH_LAUNCHING, refreshDevices);
@@ -113,7 +117,11 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         guardSwitchPorts,
       };
       if (existingAccessory) {
-        this.log.info('Restoring existing accessory from cache:', accessory.displayName);
+        this.log.log(
+          this.initialized ? LogLevel.DEBUG : LogLevel.INFO,
+          'Restoring existing accessory from cache:',
+          accessory.displayName,
+        );
         this.api.updatePlatformAccessories([accessory]);
       } else {
         this.log.info('Adding new accessory:', switchName);
@@ -149,8 +157,10 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
       if (Array.isArray(this.config.includeSites) && !this.config.includeSites.includes(site.id)) {
         continue;
       }
-      this.log.info(`Site [${site.id}]: ${site.name}`);
-
+      this.log.log(
+        this.initialized ? LogLevel.DEBUG : LogLevel.INFO,
+        `Site [${site.id}]: ${site.name}`,
+      );
       let deviceStatuses: UniFiDeviceStatus[];
       try {
         deviceStatuses = await this.uniFiSmartPower.getDeviceStatuses(site.id);
@@ -282,8 +292,14 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
           });
 
         if (hasAnyAccessories && existingAccessory) {
-          this.log.info('Restoring existing accessory from cache:', accessory.displayName);
-          logMessages.forEach((m) => this.log.info(m));
+          this.log.log(
+            this.initialized ? LogLevel.DEBUG : LogLevel.INFO,
+            'Restoring existing accessory from cache:',
+            accessory.displayName,
+          );
+          logMessages.forEach((m) =>
+            this.log.log(this.initialized ? LogLevel.DEBUG : LogLevel.INFO, m),
+          );
           this.api.updatePlatformAccessories([accessory]);
           uuids.add(uuid);
         } else if (hasAnyAccessories) {
