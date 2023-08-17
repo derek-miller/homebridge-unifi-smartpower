@@ -161,13 +161,13 @@
         "items": {
           "title": "Port ID",
           "type": "string"
-        },
-        "includeInactivePorts": {
-          "title": "Show ports that are not supplying PoE power",
-          "type": "boolean",
-          "default": false,
-          "required": false
         }
+      },
+      "includeInactivePorts": {
+        "title": "Show ports that are not supplying PoE power",
+        "type": "boolean",
+        "default": false,
+        "required": false
       },
       "refreshDevicesPollInterval": {
         "title": "Refresh Devices Poll Interval (in seconds)",

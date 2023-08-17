@@ -254,10 +254,10 @@ export class UniFiSmartPowerHomebridgePlatform implements DynamicPlatformPlugin 
         }
 
         for (const port of deviceStatus.ports) {
-          // // Use the name of the device if there is only a single outlet.
           if (!port.active && !this.config.includeInactivePorts) {
             continue;
           }
+          // Use the name of the device if there is only a single port.
           if (deviceStatus.ports.length === 1) {
             port.name = `${deviceStatus.device.name} ${port.name}`;
           }
