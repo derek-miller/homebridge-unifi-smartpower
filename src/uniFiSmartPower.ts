@@ -110,7 +110,10 @@ export class UniFiSmartPower {
   private readonly cache: Promise<Cache>;
   private readonly controller: Controller;
 
-  constructor(public readonly log: Logger, private readonly config: UniFiControllerConfig) {
+  constructor(
+    public readonly log: Logger,
+    private readonly config: UniFiControllerConfig,
+  ) {
     this.cache = caching('memory', {
       ttl: 0, // No default ttl
       max: 0, // Infinite capacity
@@ -173,12 +176,7 @@ export class UniFiSmartPower {
               throw new Error('unknown device status kind=%d', kind);
           }
         } catch (error: unknown) {
-          if (error instanceof Error) {
-            this.log.error(
-              '[API] An error occurred polling for a status update; %s',
-              error.message,
-            );
-          }
+          // Nothing to do here. The error has already been logged.
         }
         setTimeout(poll, this.statusPollIntervalMs);
       };
@@ -214,35 +212,60 @@ export class UniFiSmartPower {
   ): Promise<UniFiDeviceStatus[]> {
     let site: string;
     let device: UniFiDevice | null;
+    let errMsg = '';
     if (typeof siteOrDevice === 'string') {
       site = siteOrDevice;
+      errMsg = `site ${site} `;
       device = null;
     } else if (siteOrDevice) {
       device = siteOrDevice;
       site = device.site;
+      errMsg = `device ${device.name} [${device.mac}] `;
     }
-    const fetch = async (): Promise<UniFiDeviceStatus[]> =>
-      (await this.cache).wrap(
+    const fetch = async (): Promise<UniFiDeviceStatus[]> => {
+      const result: UniFiDeviceStatus[] | Error = await (
+        await this.cache
+      ).wrap(
         UniFiSmartPower.deviceCacheKey(device),
-        async (): Promise<UniFiDeviceStatus[]> => {
+        async (): Promise<UniFiDeviceStatus[] | Error> => {
           this.log.debug('[API] Fetching status from UniFi API');
           this.controller.opts.site = site;
-          await this.controller.login();
-          return (await this.controller.getAccessDevices(device?.mac ?? ''))
-            .filter(
-              (device) =>
-                (device.outlet_table ?? []).length > 0 || (device.port_table ?? []).length > 0,
-            )
-            .map((device) =>
-              UniFiSmartPower.transformDeviceStatusResponse(site, device as UniFiApiDevice),
+          let result: UniFiApiDevice[] = [],
+            error: Error | null = null;
+          try {
+            await this.controller.login();
+            result = await this.controller.getAccessDevices(device?.mac ?? '');
+          } catch (e: unknown) {
+            error = e as Error;
+            this.log.error(
+              '[API] An error occurred polling %sfor a status update; %s',
+              errMsg,
+              error.message,
             );
+          }
+          return (
+            error ??
+            result
+              .filter(
+                (device: UniFiApiDevice) =>
+                  (device.outlet_table ?? []).length > 0 || (device.port_table ?? []).length > 0,
+              )
+              .map((device: UniFiApiDevice) =>
+                UniFiSmartPower.transformDeviceStatusResponse(site, device),
+              )
+          );
         },
         this.statusCacheTtlMs,
       );
+      if (result instanceof Error) {
+        throw result;
+      }
+      return result;
+    };
     return acquireLock ? this.lock.acquire(UniFiSmartPower.CONTROLLER_LOCK, fetch) : fetch();
   }
 
-  static transformDeviceStatusResponse(
+  private static transformDeviceStatusResponse(
     site: string,
     {
       _id: id,
@@ -310,7 +333,9 @@ export class UniFiSmartPower {
     };
   }
 
-  static getPortPoeOnMode(poeCaps: number | null | undefined): UniFiSwitchPortPoeModeAction {
+  private static getPortPoeOnMode(
+    poeCaps: number | null | undefined,
+  ): UniFiSwitchPortPoeModeAction {
     if (
       // We already filter out non-poe ports and if it doesn't have cps then it supports auto
       poeCaps === undefined ||
@@ -333,7 +358,7 @@ export class UniFiSmartPower {
     return 'off';
   }
 
-  static poeSupportsMode(poeCaps: number | null | undefined, cap: number): boolean {
+  private static poeSupportsMode(poeCaps: number | null | undefined, cap: number): boolean {
     return !!poeCaps && (poeCaps & cap) === cap;
   }
 
